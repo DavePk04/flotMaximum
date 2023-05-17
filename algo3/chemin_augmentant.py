@@ -16,7 +16,11 @@ class FordFulkerson:
         self._t = 0
         self._max_flow = 0
         self._parse_input_file()
+        self._remove_loops()
+        self._remove_incoming_arcs_to_s()
+        self._remove_outgoing_arcs_from_t()
         self._compute_max_flow()
+
 
     def _parse_input_file(self):
         with open(self._filename, 'r') as f:
@@ -65,6 +69,18 @@ class FordFulkerson:
             if elapsed_time > time_limit:
                 break
 
+    def _remove_loops(self):
+        for i in range(self._n):
+            self._graph[i][i] = 0
+
+    def _remove_incoming_arcs_to_s(self):
+        for i in range(self._n):
+            self._graph[i][self._s] = 0
+
+    def _remove_outgoing_arcs_from_t(self):
+        for i in range(self._n):
+            self._graph[self._t][i] = 0
+
     def get_max_flow(self):
         return self._max_flow
 
@@ -73,6 +89,26 @@ class FordFulkerson:
             filename = f"model-{self._filename.replace('Instances/inst-', '').replace('.txt', '')}.path"
         with open(filename, 'w') as f:
             f.write(f"Le flot maximal est : {self._max_flow}")
+
+    def calculate_max_flow_st_cut(self):
+        visited = set()
+        queue = deque([self._s])
+        visited.add(self._s)
+
+        while queue:
+            u = queue.popleft()
+            for v, capacity in self._graph[u].items():
+                if capacity > 0 and v not in visited:
+                    queue.append(v)
+                    visited.add(v)
+
+        st_cut_flow = 0
+        for u in visited:
+            for v, capacity in self._graph[u].items():
+                if v not in visited and capacity == 0:
+                    st_cut_flow += self._graph[v][u]
+
+        return st_cut_flow
 
 
 if __name__ == "__main__":
@@ -84,3 +120,9 @@ if __name__ == "__main__":
     maxflow = ford_fulkerson.get_max_flow()
     ford_fulkerson.save_result()
     print(f"Le flot maximal est : {maxflow}")
+
+    st_cut_flow = ford_fulkerson.calculate_max_flow_st_cut()
+    print(f"Le flot maximum traversant la st-coupe est : {st_cut_flow}")
+
+    print("le flot maximal est-il optimal ?" + str(maxflow == st_cut_flow))
+
