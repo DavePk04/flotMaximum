@@ -3,6 +3,9 @@ import os
 
 
 class GenerateModel:
+    """
+    Generate a model for the maximum flow problem in the format of CPLEX LP files.
+    """
     def __init__(self):
         self._n = 0  # number of nodes
         self._s = 0  # source

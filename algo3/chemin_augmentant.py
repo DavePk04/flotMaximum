@@ -5,6 +5,9 @@ import time
 
 
 class FordFulkerson:
+    """
+    Implementation of the Ford-Fulkerson algorithm to compute the maximum flow in a network.
+    """
     def __init__(self, filename):
         self._filename = filename
         self._graph = None
@@ -70,9 +73,6 @@ class FordFulkerson:
             filename = f"model-{self._filename.replace('Instances/inst-', '').replace('.txt', '')}.path"
         with open(filename, 'w') as f:
             f.write(f"Le flot maximal est : {self._max_flow}")
-
-    def get_graph(self):
-        return self._graph
 
 
 if __name__ == "__main__":
