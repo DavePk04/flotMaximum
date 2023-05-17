@@ -21,9 +21,11 @@ class MaxFlowSolver:
             self.t = int(lines[2].split()[1])  # sink node
             num_arcs = int(lines[3].split()[1])  # number of edges
             self.graph = [[0] * self.n for _ in range(self.n)]  # initialize the adjacency matrix with zeros
-            for i in range(4, 4 + num_arcs):
-                u, v, capacity = map(int, lines[i].split())
-                self.graph[u][v] = capacity  # set the capacity of the edge
+            for line in lines[4:4 + num_arcs]:
+                u, v, capacity = map(int, line.split())
+                # Ignore the edge from j to i if an edge from i to j already exists and ignore self-loops
+                if self.graph[v][u] == 0 and u != v:
+                    self.graph[u][v] = capacity  # set edge capacity
 
     def bfs(self, parent):
         visited = [False] * len(self.graph)  # mark all nodes as unvisited
@@ -61,9 +63,5 @@ class MaxFlowSolver:
 
 
 if __name__ == '__main__':
-    try:
-        solver = MaxFlowSolver(sys.argv[1])
-        solver.solve()
-    except IndexError:
-        print("Usage: python chemin_augmentant.py <filename>")
-        sys.exit(1)
+    solver = MaxFlowSolver(sys.argv[1])
+    solver.solve()
