@@ -12,6 +12,8 @@ class FordFulkerson:
         self._s = 0
         self._t = 0
         self._max_flow = 0
+        self._parse_input_file()
+        self._compute_max_flow()
 
     def _parse_input_file(self):
         with open(self._filename, 'r') as f:
@@ -39,7 +41,7 @@ class FordFulkerson:
                         return True
         return False
 
-    def compute_max_flow(self, time_limit=300):
+    def _compute_max_flow(self, time_limit=300):
         parent = [-1] * self._n
         self._max_flow = 0
         start_time = time.time()
@@ -72,20 +74,13 @@ class FordFulkerson:
     def get_graph(self):
         return self._graph
 
-    @staticmethod
-    def from_file(filename):
-        ford_fulkerson = FordFulkerson(filename)
-        ford_fulkerson._parse_input_file()
-        return ford_fulkerson
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ford-Fulkerson algorithm')
     parser.add_argument('filename', type=str, help='input file')
     args = parser.parse_args()
 
-    ford_fulkerson = FordFulkerson.from_file(args.filename)
-    ford_fulkerson.compute_max_flow()
+    ford_fulkerson = FordFulkerson(args.filename)
     maxflow = ford_fulkerson.get_max_flow()
     ford_fulkerson.save_result()
     print(f"Le flot maximal est : {maxflow}")
