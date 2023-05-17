@@ -1,4 +1,5 @@
 import sys
+import os
 
 class MaxFlowSolver:
     def __init__(self, filename):
@@ -33,8 +34,17 @@ class MaxFlowSolver:
                     # If there is an edge from i to j and an edge from j to i, remove the edge from j to i
                     self.graph[j][i] = 0
 
+    def get_model_filename(self):
+        file_name_without_ext = os.path.splitext(self.filename)[0]
+        file_parts = file_name_without_ext.split("-")
+        n = file_parts[1]
+        p = file_parts[2]
+        model_filename = "model-{}.lp".format("-".join([n, p]))
+        return model_filename
+
     def write_model(self):
-        with open("model-n-p.lp", 'w') as f:
+        model_filename = self.get_model_filename()
+        with open(model_filename, 'w') as f:
             f.write("Maximize\n")
             f.write(" obj: ")
             outgoing_edges = [j for j in range(self.n) if self.graph[self.s][j] > 0]
