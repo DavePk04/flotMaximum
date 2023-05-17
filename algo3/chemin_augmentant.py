@@ -70,5 +70,8 @@ class MaxFlowSolver:
 
 
 if __name__ == '__main__':
-    solver = MaxFlowSolver(sys.argv[1])
-    solver.solve()
+    try:
+        solver = MaxFlowSolver(sys.argv[1])
+        solver.solve()
+    except IndexError:
+        print("Usage: python chemin_augmentant.py <filename>")
