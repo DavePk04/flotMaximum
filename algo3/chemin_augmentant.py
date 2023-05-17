@@ -10,6 +10,7 @@ class MaxFlowSolver:
 
     def solve(self):
         self.parse_input_file()
+        self.remove_cycles()
         max_flow = self.ford_fulkerson()
         print("maximal flow: {}".format(max_flow))
 
@@ -23,9 +24,15 @@ class MaxFlowSolver:
             self.graph = [[0] * self.n for _ in range(self.n)]  # initialize the adjacency matrix with zeros
             for line in lines[4:4 + num_arcs]:
                 u, v, capacity = map(int, line.split())
-                # Ignore the edge from j to i if an edge from i to j already exists and ignore self-loops
-                if self.graph[v][u] == 0 and u != v:
-                    self.graph[u][v] = capacity  # set edge capacity
+                self.graph[u][v] = capacity  # set edge capacity
+
+    def remove_cycles(self):
+        for i in range(self.n):
+            self.graph[i][i] = 0 # remove self-loops
+            for j in range(i + 1, self.n):
+                if self.graph[i][j] > 0 and self.graph[j][i] > 0:
+                    # If there is an edge from i to j and an edge from j to i, remove the edge from j to i
+                    self.graph[j][i] = 0
 
     def bfs(self, parent):
         visited = [False] * len(self.graph)  # mark all nodes as unvisited
