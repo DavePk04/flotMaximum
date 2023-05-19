@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 
 class GenerateModel:
@@ -87,19 +88,64 @@ class GenerateModel:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate model from instance file')
-    parser.add_argument('instance_file', type=str, help='instance file')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Generate model from instance file')
+    # parser.add_argument('instance_file', type=str, help='instance file')
+    # args = parser.parse_args()
+    #
+    # generator = GenerateModel()
+    # generator.generate(args.instance_file)
+    #
+    # output_file = generator.get_output_file()
+    # solution_path = os.path.join("solutions", output_file.replace(".lp", ".sol"))
+    #
+    # if not os.path.exists(solution_path):
+    #     os.makedirs("solutions", exist_ok=True)
+    #     start_time = time.time()
+    #     os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
+    #     end_time = time.time()
+    #     print(f"Time: {end_time - start_time} seconds")
+    #     print(f"Solution has been generated successfully in the file {solution_path}\n")
+    # else:
+    #     start_time = time.time()
+    #     os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
+    #     end_time = time.time()
+    #     print(f"Time2: {end_time - start_time} seconds")
 
-    generator = GenerateModel()
-    generator.generate(args.instance_file)
+    folder = "Instances"
+    max_flow_dict = {}
+    start_time = 0
+    end_time = 0
+    # sort filenames by size
+    for filename in sorted(os.listdir(folder), key=lambda x: os.path.getsize(os.path.join(folder, x))):
+        if filename.endswith(".txt"):
+            generator = GenerateModel()
+            generator.generate(os.path.join(folder, filename))
+            output_file = generator.get_output_file()
+            solution_path = os.path.join("solutions", output_file.replace(".lp", ".sol"))
+            if not os.path.exists(solution_path):
+                os.makedirs("solutions", exist_ok=True)
+                start_time = time.time()
+                os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
+                end_time = time.time()
+                print(f"Solution has been generated successfully in the file {solution_path}\n")
+            else:
+                start_time = time.time()
+                os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
+                end_time = time.time()
+            with open(solution_path, 'r') as f:
+                i = 0
+                for line in f:
+                    if i == 5:
+                        max_flow_dict[filename] = (int(line.split()[3]), (end_time - start_time))
+                        break
+                    i += 1
 
-    output_file = generator.get_output_file()
-    solution_path = os.path.join("solutions", output_file.replace(".lp", ".sol"))
+    print(max_flow_dict)
 
-    if not os.path.exists(solution_path):
-        os.makedirs("solutions", exist_ok=True)
-        os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
-        print(f"Solution has been generated successfully in the file {solution_path}\n")
-    else:
-        os.system(f"glpsol --tmlim 300 --lp models/{output_file} -o {solution_path}")
+    with open("glpk_results.txt", 'w') as f:
+        for file in max_flow_dict:
+            f.write("filename : " + file + "\n")
+            f.write("max flow : " + str(max_flow_dict[file][0]) + "\n")
+            f.write("time : " + str(max_flow_dict[file][1]) + "\n")
+            f.write("\n")
+
