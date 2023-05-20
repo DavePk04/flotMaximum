@@ -1,7 +1,9 @@
 import argparse
+import glob
 import math
-from collections import deque, defaultdict
+import os
 import time
+from collections import deque, defaultdict
 
 
 class FordFulkerson:
@@ -16,6 +18,20 @@ class FordFulkerson:
         self._s = 0
         self._t = 0
         self._max_flow = 0
+        self._elapsed_time = 0
+        try:
+            self._run()
+        except FileNotFoundError:
+            print(f"Error: File '{filename}' not found.")
+            return
+        except IsADirectoryError:
+            print(f"Error: '{filename}' is a directory. Please provide a valid instance file.")
+            return
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return
+
+    def _run(self):
         self._parse_input_file()
         self._remove_loops()
         self._remove_incoming_arcs_to_s()
@@ -78,6 +94,8 @@ class FordFulkerson:
             if elapsed_time > time_limit:
                 break
 
+        self._elapsed_time = elapsed_time
+
     def _remove_loops(self):
         """
         Remove self-loops in the graph by setting the corresponding capacities to 0.
@@ -132,19 +150,53 @@ class FordFulkerson:
         """
         return self._max_flow
 
+    def get_elapsed_time(self):
+        """
+        Get the elapsed time for computing the maximum flow.
+        """
+        return self._elapsed_time
+
     def save_result(self, filename=None):
         if filename is None:
             filename = f"model-{self._filename.replace('Instances/inst-', '').replace('.txt', '')}.path"
         with open(filename, 'w') as f:
-            f.write(f"Le flot maximal est : {self._max_flow}")
+            f.write(f"Le flot maximal est : {self._max_flow}\n")
+            f.write(f"Temps écoulé : {self._elapsed_time:.2f} seconds\n")
+
+
+def process_instances(folder_path):
+    """
+    Process all instances in the specified folder and write the results to the result.txt file.
+    """
+    instances = glob.glob(f"{folder_path}/*.txt")
+    with open("result_ford_fulkerson.txt", "w") as result_file:
+        for instance in instances:
+            print(f"Processing instance: {instance}")
+            ford_fulkerson = FordFulkerson(instance)
+            max_flow = ford_fulkerson.get_max_flow()
+            elapsed_time = ford_fulkerson.get_elapsed_time()
+            result_file.write(f"Instance: {instance}\n")
+            result_file.write(f"Maximum Flow: {max_flow}\n")
+            result_file.write(f"Elapsed Time: {elapsed_time:.2f} seconds\n\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ford-Fulkerson algorithm')
-    parser.add_argument('filename', type=str, help='input file')
+    parser.add_argument('-f', '--folder', type=str, help='folder path containing instances')
+    parser.add_argument('filename', nargs='?', type=str, help='input file')
     args = parser.parse_args()
 
-    ford_fulkerson = FordFulkerson(args.filename)
-    maxflow = ford_fulkerson.get_max_flow()
-    ford_fulkerson.save_result()
-    print(f"Le flot maximal est : {maxflow}")
+    if args.folder:
+        try:
+            process_instances(args.folder)
+        except NotADirectoryError:
+            print("Please provide a valid folder path.")
+    elif args.filename:
+        ford_fulkerson = FordFulkerson(args.filename)
+        max_flow = ford_fulkerson.get_max_flow()
+        elapsed_time = ford_fulkerson.get_elapsed_time()
+        ford_fulkerson.save_result()
+        print(f"Le flot maximal est : {max_flow}")
+        print(f"Temps écoulé : {elapsed_time:.2f} seconds")
+    else:
+        print("Please provide a folder path or an instance file.")
