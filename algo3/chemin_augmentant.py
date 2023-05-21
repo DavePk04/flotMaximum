@@ -1,9 +1,9 @@
 import argparse
 import glob
 import math
-import os
 import time
-from collections import deque, defaultdict
+from collections import deque
+from tqdm import tqdm
 
 
 class FordFulkerson:
@@ -19,17 +19,9 @@ class FordFulkerson:
         self._t = 0
         self._max_flow = 0
         self._elapsed_time = 0
-        try:
-            self._run()
-        except FileNotFoundError:
-            print(f"Error: File '{filename}' not found.")
-            return
-        except IsADirectoryError:
-            print(f"Error: '{filename}' is a directory. Please provide a valid instance file.")
-            return
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return
+        self._augmenting_graph = []
+        self._residual_graph = []
+        self._run()
 
     def _run(self):
         self._parse_input_file()
@@ -37,6 +29,8 @@ class FordFulkerson:
         self._remove_incoming_arcs_to_s()
         self._remove_outgoing_arcs_from_t()
         self._compute_max_flow()
+        self._retrieve_augmented_graph()
+        self._save_result()
         self._calculate_max_flow_st_cut()
 
     def _parse_input_file(self):
@@ -49,9 +43,12 @@ class FordFulkerson:
             self._t = int(f.readline().split()[1])
             num_arcs = int(f.readline().split()[1])
             self._graph = [[0] * self._n for _ in range(self._n)]
+            self._residual_graph = [[0] * self._n for _ in range(self._n)]
+            self._augmenting_graph = []
             for _ in range(num_arcs):
                 u, v, capacity = map(int, f.readline().split())
                 self._graph[u][v] = capacity
+                self._residual_graph[u][v] = capacity
 
     def _bfs(self, parent):
         """
@@ -61,8 +58,8 @@ class FordFulkerson:
         visited = set(queue)
         while queue:
             u = queue.popleft()
-            for v, capacity in enumerate(self._graph[u]):
-                if capacity > 0 and v not in visited:
+            for v, capacity in enumerate(self._residual_graph[u]):
+                if capacity and v not in visited:
                     queue.append(v)
                     visited.add(v)
                     parent[v] = u
@@ -76,18 +73,19 @@ class FordFulkerson:
         """
         parent = [-1] * self._n
         self._max_flow = 0
+        elapsed_time = 0
         start_time = time.time()
         while self._bfs(parent):
             path_flow = math.inf
             v, u = self._t, parent[self._t]
             while v != self._s:
-                path_flow = min(path_flow, self._graph[u][v])
+                path_flow = min(path_flow, self._residual_graph[u][v])
                 v, u = u, parent[u]
             self._max_flow += path_flow
             v, u = self._t, parent[self._t]
             while v != self._s:
-                self._graph[u][v] -= path_flow
-                self._graph[v][u] += path_flow
+                self._residual_graph[u][v] -= path_flow
+                self._residual_graph[v][u] += path_flow
                 v, u = u, parent[u]
 
             elapsed_time = time.time() - start_time
@@ -101,21 +99,24 @@ class FordFulkerson:
         Remove self-loops in the graph by setting the corresponding capacities to 0.
         """
         for i in range(self._n):
-            self._graph[i][i] = 0
+            # self._graph[i][i] = 0
+            self._residual_graph[i][i] = 0
 
     def _remove_incoming_arcs_to_s(self):
         """
         Remove incoming arcs to the source node by setting their capacities to 0.
         """
         for i in range(self._n):
-            self._graph[i][self._s] = 0
+            # self._graph[i][self._s] = 0
+            self._residual_graph[i][self._s] = 0
 
     def _remove_outgoing_arcs_from_t(self):
         """
         Remove outgoing arcs from the sink node by setting their capacities to 0.
         """
         for i in range(self._n):
-            self._graph[self._t][i] = 0
+            # self._graph[self._t][i] = 0
+            self._residual_graph[self._t][i] = 0
 
     def _calculate_max_flow_st_cut(self):
         """
@@ -127,15 +128,15 @@ class FordFulkerson:
 
         while queue:
             u = queue.popleft()
-            for v, capacity in enumerate(self._graph[u]):
+            for v, capacity in enumerate(self._residual_graph[u]):
                 if capacity > 0 and v not in visited:
                     queue.append(v)
                     visited.add(v)
 
         st_cut_flow = sum(
-            self._graph[v][u]
+            self._residual_graph[v][u]
             for u in visited
-            for v, capacity in enumerate(self._graph[u])
+            for v, capacity in enumerate(self._residual_graph[u])
             if v not in visited and capacity == 0
         )
 
@@ -156,12 +157,33 @@ class FordFulkerson:
         """
         return self._elapsed_time
 
-    def save_result(self, filename=None):
-        if filename is None:
-            filename = f"model-{self._filename.replace('Instances/inst-', '').replace('.txt', '')}.path"
+    def _retrieve_augmented_graph(self):
+        """
+        Retrieve the augmented graph from the residual graph.
+        """
+        for u in range(self._n):
+            for v in range(self._n):
+                residual_capacity = self._residual_graph[u][v]
+                original_capacity = self._graph[u][v]
+                if original_capacity:
+                    self._augmenting_graph.append((u, v, original_capacity - residual_capacity))
+
+    def _save_result(self):
+        filename = f"model-{self._filename.replace('Instances/inst-', '').replace('.txt', '')}.path"
         with open(filename, 'w') as f:
-            f.write(f"Le flot maximal est : {self._max_flow}\n")
-            f.write(f"Temps écoulé : {self._elapsed_time:.2f} seconds\n")
+            f.write(f"The maximum flow is : {self._max_flow}\n")
+            f.write(f"Elapsed time: {self._elapsed_time:.2f} seconds\n")
+            f.write("\nAugmenting graph:\n")
+
+            for edge in self._augmenting_graph:
+                f.write(f"Flow in edge {edge[0]} -> {edge[1]} is {edge[2]}\n")
+                f.write(f"\tWith the initial capacity of: {self._graph[edge[0]][edge[1]]}\n")
+
+    def get_augmenting_graph(self):
+        """
+        Get the augmenting graph.
+        """
+        return self._augmenting_graph
 
 
 def process_instances(folder_path):
@@ -169,15 +191,21 @@ def process_instances(folder_path):
     Process all instances in the specified folder and write the results to the result.txt file.
     """
     instances = glob.glob(f"{folder_path}/*.txt")
-    with open("result_ford_fulkerson.txt", "w") as result_file:
-        for instance in instances:
-            print(f"Processing instance: {instance}")
-            ford_fulkerson = FordFulkerson(instance)
-            max_flow = ford_fulkerson.get_max_flow()
-            elapsed_time = ford_fulkerson.get_elapsed_time()
-            result_file.write(f"Instance: {instance}\n")
-            result_file.write(f"Maximum Flow: {max_flow}\n")
-            result_file.write(f"Elapsed Time: {elapsed_time:.2f} seconds\n\n")
+    for instance in tqdm(instances, desc="Processing instances", unit="instance"):
+        print(f"Processing instance: {instance}")
+        ford_fulkerson = FordFulkerson(instance)
+        max_flow = ford_fulkerson.get_max_flow()
+        elapsed_time = ford_fulkerson.get_elapsed_time()
+        print(f"The maximum flow is : {max_flow}")
+        print(f"Elapsed time: {elapsed_time:.2f} seconds")
+
+
+def process_instance(file_path):
+    ford_fulkerson = FordFulkerson(file_path)
+    max_flow = ford_fulkerson.get_max_flow()
+    elapsed_time = ford_fulkerson.get_elapsed_time()
+    print(f"The maximum flow is : {max_flow}")
+    print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
 
 if __name__ == "__main__":
@@ -192,11 +220,14 @@ if __name__ == "__main__":
         except NotADirectoryError:
             print("Please provide a valid folder path.")
     elif args.filename:
-        ford_fulkerson = FordFulkerson(args.filename)
-        max_flow = ford_fulkerson.get_max_flow()
-        elapsed_time = ford_fulkerson.get_elapsed_time()
-        ford_fulkerson.save_result()
-        print(f"Le flot maximal est : {max_flow}")
-        print(f"Temps écoulé : {elapsed_time:.2f} seconds")
+        filename = args.filename
+        try:
+            process_instance(filename)
+        except FileNotFoundError:
+            print(f"Error: File '{filename}' not found.")
+        except IsADirectoryError:
+            print(f"Error: '{filename}' is a directory. Please provide a valid instance file.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
     else:
-        print("Please provide a folder path or an instance file.")
+        parser.print_help()
