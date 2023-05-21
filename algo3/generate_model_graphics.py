@@ -56,11 +56,11 @@ def build_graph(data, type):
 
     for key, value in data.items():
         if value['type'] == type:
-            sizes.append(value['size'] / 100)
+            sizes.append(value['size'])
             times.append(value['time'])
 
     plt.plot(times, sizes, marker='o')
-    plt.ylabel("Taille des instances de type {} (×100)".format(type))
+    plt.ylabel("Taille des instances de type {}".format(type))
     plt.xlabel('Temps de résolution (en secondes)')
     plt.title('glpk: taille des instances = f(temps de résolution)')
     plt.show()
